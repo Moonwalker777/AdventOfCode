@@ -1,20 +1,7 @@
-from functools import wraps
-from concurrent.futures import ProcessPoolExecutor
-import time
+from tooling import timingWrapper
 import numpy as np
 
-def timeit(func):
-    @wraps(func)
-    def timeit_wrapper(*args, **kwargs):
-        start_time = time.perf_counter()
-        result = func(*args, **kwargs)
-        end_time = time.perf_counter()
-        total_time = end_time - start_time
-        print(f'Function took {total_time:.10f} seconds')
-        return result
-    return timeit_wrapper
-
-@timeit
+@timingWrapper.timeit
 def findDistance(list1, list2):
     list1.sort()
     list2.sort()
@@ -22,14 +9,14 @@ def findDistance(list1, list2):
     distance = [abs(a - b) for a, b in zip(list1, list2)]
     return sum(distance)
 
-@timeit
+@timingWrapper.timeit
 def findDistanceNP(list1, list2):
     list1 = np.sort(list1)
     list2 = np.sort(list2)
 
     return np.sum(np.abs(list1 - list2))
 
-@timeit
+@timingWrapper.timeit
 def similarityScoreNP(list1, list2):
     # Compute the intersection and their counts using NumPy broadcasting
     unique_elements, counts_in_list2 = np.unique(list2, return_counts=True)
