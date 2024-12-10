@@ -1,4 +1,5 @@
 from tooling import timingWrapper
+import bisect
 
 def findRightmostBlock(dataList: list) -> int:
     for i in range(len(dataList)-1, -1, -1):
@@ -17,66 +18,105 @@ def findGap(dataList)-> int:
     return -1
 
 @timingWrapper.timeit
-def moveData(data: str) -> str:
-    dataList = list(data)
-    while True:
-        gapIndex = findGap(dataList)
-        if gapIndex == -1:
-            # No gaps found, we are done
+def moveData(data: list) -> list:
+    dataList = data.copy()
+
+    # Track gaps and blocks
+    blocks = [i for i, ch in enumerate(dataList) if ch != "."]
+    gaps = [i for i, ch in enumerate(dataList) if ch == "."]
+
+    while blocks and gaps:
+        rightmost_block_pos = blocks[-1]
+
+        if gaps[0] >= rightmost_block_pos:
             break
 
-        rightBlockIndex = findRightmostBlock(dataList)
-        if rightBlockIndex == -1:
-            # No rightmost block found (all empty?), just break
+        gap_pos = gaps[0]
+        old_block_char = dataList[rightmost_block_pos]
+        dataList[gap_pos] = old_block_char
+        dataList[rightmost_block_pos] = '.'
+
+        # Update blocks and gaps
+        blocks.pop()
+        bisect.insort(blocks, gap_pos)
+
+        del gaps[0]
+        bisect.insort(gaps, rightmost_block_pos)
+
+    return dataList
+
+from tooling import timingWrapper
+import bisect
+
+def findRightmostBlock(dataList: list) -> int:
+    for i in range(len(dataList)-1, -1, -1):
+        if dataList[i] != ".":
+            return i
+    return -1
+
+def findGap(dataList)-> int:
+    lastBlockPosition = findRightmostBlock(dataList)
+    if lastBlockPosition == -1:
+        return -1
+
+    for i, ch in enumerate(dataList):
+        if ch == '.' and i < lastBlockPosition:
+            return i
+    return -1
+
+@timingWrapper.timeit
+def moveData(data: list) -> list:
+    dataList = data.copy()
+
+    # Efficiently track gaps and blocks
+    blocks = [i for i, ch in enumerate(dataList) if ch != "."]
+    gaps = [i for i, ch in enumerate(dataList) if ch == "."]
+
+    while blocks and gaps:
+        rightmost_block_pos = blocks[-1]
+
+        if gaps[0] >= rightmost_block_pos:
             break
 
-        # Move the block from rightBlockIndex to gapIndex
-        dataList[gapIndex] = dataList[rightBlockIndex]
-        dataList[rightBlockIndex] = '.'
+        gap_pos = gaps[0]
+        old_block_char = dataList[rightmost_block_pos]
+        dataList[gap_pos] = old_block_char
+        dataList[rightmost_block_pos] = '.'
 
-    return ''.join(dataList)
+        # Update blocks and gaps
+        blocks.pop()
+        bisect.insort(blocks, gap_pos)
 
-def calculateChecksum(data: str) -> int:
-    dataList = list(data)
-    stippedList = [point for point in dataList if point != '.']
+        del gaps[0]
+        bisect.insort(gaps, rightmost_block_pos)
+
+    return dataList
+
+def calculateChecksum(data: list) -> int:
     checksum = 0
-    for i, data in enumerate(stippedList):
-        checksum += int(data) * i
-
+    for i, ch in enumerate(data):
+        if ch != '.':
+            checksum += int(ch) * i
     return checksum
 
 @timingWrapper.timeit
-def blockRepresentation(data: str) -> str:
-    file_id = 0
-    result = []
-
-    for i, ch in enumerate(data):
-        length = int(ch)
+def blockRepresentation(data: str) -> list:
+    remapped = []
+    fileID = 0
+    for i in range(len(data)):
+        for _ in range(int(data[i])):
+            remapped.append(str(fileID) if i % 2 == 0 else ".")
         if i % 2 == 0:
-            # Even index: file length
-            if length > 0:
-                result.append(str(file_id) * length)
-                file_id += 1
-        else:
-            # Odd index: free space length
-            if length > 0:
-                result.append('.' * length)
-
-    return "".join(result)
+            fileID += 1
+    return remapped
 
 def main():
-    with open("testData.txt", 'r') as file:
+    with open("dataDay9.txt", 'r') as file:
         data = file.readline().strip()
-
     block = blockRepresentation(data)
-    print(block)
     defragmentedData = moveData(block)
-    print(defragmentedData)
     checkSum = calculateChecksum(defragmentedData)
     print("Checksum is:", checkSum)
 
 if __name__ == "__main__":
     main()
-
-# 0.0000070001
-# 0.0000237999
